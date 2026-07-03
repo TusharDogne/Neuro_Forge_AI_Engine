@@ -6,8 +6,12 @@ from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin
 from app.utils.security import hash_password, verify_password
 from app.utils.jwt import create_access_token
+from app.dependencies.auth import get_current_user
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/projects",
+    tags=["Projects"]
+)
 @router.post("/register")
 def register(
     user: UserCreate,
@@ -88,4 +92,14 @@ def login(
     return {
         "access_token": token,
         "token_type": "bearer"
+    }
+#---------------- GET CURRENT USER ---------------- #
+@router.get("/me")
+def get_me(
+    current_user: User = Depends(get_current_user)
+):
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email
     }
