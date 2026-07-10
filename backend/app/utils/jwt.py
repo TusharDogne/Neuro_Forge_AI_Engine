@@ -18,6 +18,7 @@ def create_access_token(data: dict):
     """
     Generate a JWT access token.
     """
+    
 
     # Copy the payload
     to_encode = data.copy()
@@ -26,7 +27,7 @@ def create_access_token(data: dict):
     expire = datetime.now(UTC) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )
-
+    
     # Add expiration to payload
     to_encode.update({"exp": expire})
 
