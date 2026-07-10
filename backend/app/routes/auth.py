@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 
 from app.db.database import get_db
 from app.models.user import User
@@ -62,10 +63,16 @@ def login(
 ):
 
     # Find user by email
-    db_user = db.query(User).filter(
-        User.email == form_data.username
-    ).first()
-
+    db_user = (
+    db.query(User)
+    .filter(
+        or_(
+            User.email == form_data.username,
+            User.username == form_data.username
+        )
+    )
+    .first()
+)
     if not db_user:
         raise HTTPException(
             status_code=404,
