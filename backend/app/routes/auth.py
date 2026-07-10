@@ -7,10 +7,12 @@ from app.schemas.user import UserCreate, UserLogin
 from app.utils.security import hash_password, verify_password
 from app.utils.jwt import create_access_token
 from app.dependencies.auth import get_current_user
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter(
-    prefix="/projects",
-    tags=["Projects"]
+    prefix="/auth",
+    tags=["Authentication"]
 )
 @router.post("/register")
 def register(
@@ -53,19 +55,17 @@ def register(
 
 
 # ---------------- LOGIN ---------------- #
-
 @router.post("/login")
 def login(
-    user: UserLogin,
+    form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
 
     # Find user by email
     db_user = db.query(User).filter(
-        User.email == user.email
+        User.email == form_data.username
     ).first()
 
-    # User not found
     if not db_user:
         raise HTTPException(
             status_code=404,
@@ -74,7 +74,7 @@ def login(
 
     # Verify password
     if not verify_password(
-        user.password,
+        form_data.password,
         db_user.password
     ):
         raise HTTPException(
@@ -82,7 +82,7 @@ def login(
             detail="Invalid password"
         )
 
-    # Generate JWT token
+    # Generate JWT
     token = create_access_token(
         {
             "sub": db_user.email
@@ -92,8 +92,7 @@ def login(
     return {
         "access_token": token,
         "token_type": "bearer"
-    }
-#---------------- GET CURRENT USER ---------------- #
+    }#---------------- GET CURRENT USER ---------------- #
 @router.get("/me")
 def get_me(
     current_user: User = Depends(get_current_user)

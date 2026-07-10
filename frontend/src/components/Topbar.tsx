@@ -89,7 +89,7 @@ export default function Topbar() {
             <span className="text-2xs font-600 text-primary-foreground">MK</span>
           </div>
           <div className="hidden sm:flex flex-col items-start">
-            <span className="text-xs font-500 text-foreground leading-tight">Marcus Kim</span>
+            <span className="text-xs font-500 text-foreground leading-tight">Tushar Dogne</span>
             <span className="text-2xs text-muted-foreground">ML Engineer</span>
           </div>
           <ChevronDown size={12} className="text-muted-foreground hidden sm:block" />

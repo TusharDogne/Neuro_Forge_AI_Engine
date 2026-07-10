@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship
 
 from app.db.database import Base
 
@@ -29,3 +30,8 @@ class Project(Base):
         "User",
         back_populates="projects"
     )
+    datasets = relationship(
+    "Dataset",
+    back_populates="project",
+    cascade="all, delete"
+)
