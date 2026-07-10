@@ -113,3 +113,14 @@ def get_missing_values(dataset_id: int, db: Session):
         "total_missing_values": total_missing,
         "column_wise_missing": missing
     }
+def get_duplicate_rows(dataset_id: int, db: Session):
+    
+    dataset, df = load_dataset(dataset_id, db)
+
+    duplicates = int(df.duplicated().sum())
+
+    return {
+        "dataset_id": dataset.id,
+        "filename": dataset.original_filename,
+        "duplicate_rows": duplicates
+    }

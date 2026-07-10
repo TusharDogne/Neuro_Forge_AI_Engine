@@ -47,3 +47,10 @@ def missing_values(
     current_user: User = Depends(get_current_user)
 ):
     return get_missing_values(dataset_id, db)
+@router.get("/{dataset_id}/duplicates")
+def duplicate_rows(
+    dataset_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_duplicate_rows(dataset_id, db)
