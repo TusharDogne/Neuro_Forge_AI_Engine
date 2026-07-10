@@ -5,7 +5,15 @@ from app.db.database import get_db
 from app.dependencies.auth import get_current_user
 
 from app.models.user import User
-from app.services.dataset_service import upload_dataset_service
+from app.services.dataset_service import upload_dataset_service 
+from app.services.dataset_service import (
+  
+    get_dataset_preview,
+    get_missing_values,
+    get_duplicate_rows,
+    get_data_types,
+    get_summary
+)
 
 router = APIRouter(
     prefix="/datasets",
@@ -54,3 +62,14 @@ def duplicate_rows(
     current_user: User = Depends(get_current_user)
 ):
     return get_duplicate_rows(dataset_id, db)
+
+@router.get("/{dataset_id}/summary")
+def dataset_summary(
+    dataset_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return get_summary(
+        dataset_id,
+        db
+    )

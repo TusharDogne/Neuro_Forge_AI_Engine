@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from app.models.dataset import Dataset
 from app.utils.file_utils import save_uploaded_file, read_dataset
 from fastapi import HTTPException
-from app.utils.file_utils import read_dataset
 
 
 
@@ -95,6 +94,7 @@ def load_dataset(dataset_id: int, db: Session):
     df = read_dataset(dataset.file_path)
 
     return dataset, df
+
 def get_missing_values(dataset_id: int, db: Session):
 
     dataset, df = load_dataset(dataset_id, db)
@@ -113,6 +113,7 @@ def get_missing_values(dataset_id: int, db: Session):
         "total_missing_values": total_missing,
         "column_wise_missing": missing
     }
+
 def get_duplicate_rows(dataset_id: int, db: Session):
     
     dataset, df = load_dataset(dataset_id, db)
@@ -124,3 +125,20 @@ def get_duplicate_rows(dataset_id: int, db: Session):
         "filename": dataset.original_filename,
         "duplicate_rows": duplicates
     }
+
+def get_data_types(dataset_id, db):
+    
+    dataset, df = load_dataset(dataset_id, db)
+
+    return {
+        column: str(dtype)
+        for column, dtype in df.dtypes.items()
+    }
+
+def get_summary(dataset_id: int, db: Session):
+    
+    dataset, df = load_dataset(dataset_id, db)
+
+    summary = df.describe(include="all")
+
+    return summary.fillna("").to_dict()
