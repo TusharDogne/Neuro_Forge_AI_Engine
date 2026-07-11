@@ -12,10 +12,7 @@ from app.services.cleaning_service import (
     scale_dataset
 )
 
-from app.services.cleaning_service import (
-    fill_missing_values,
-    remove_duplicates
-)
+
 
 router = APIRouter(
     prefix="/cleaning",

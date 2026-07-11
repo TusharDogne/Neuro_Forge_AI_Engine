@@ -3,7 +3,7 @@ import uuid
 import pandas as pd
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler , label_binarize , MaxAbsScaler, Normalizer
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, MaxAbsScaler, Normalizer
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder
 
 from app.services.dataset_service import load_dataset
@@ -281,6 +281,90 @@ def one_hot_encode(
         "column": column,
 
         "new_columns": list(df.columns),
+
+        "processed_file": processed_path,
+
+        "rows": int(df.shape[0]),
+
+        "columns": int(df.shape[1])
+
+    }
+#=========================================================
+#                   Scaling Dataset
+#=========================================================
+def scale_dataset(
+    dataset_id: int,
+    columns: list[str],
+    method: str,
+    db: Session
+):
+
+    dataset, df = load_dataset(
+        dataset_id,
+        db
+    )
+
+    # Validate columns
+    for column in columns:
+
+        if column not in df.columns:
+
+            raise HTTPException(
+                status_code=404,
+                detail=f"{column} not found."
+            )
+
+        if not pd.api.types.is_numeric_dtype(df[column]):
+
+            raise HTTPException(
+                status_code=400,
+                detail=f"{column} must be numeric."
+            )
+
+    method = method.lower()
+
+    scalers = {
+
+        "standard": StandardScaler(),
+
+        "minmax": MinMaxScaler(),
+
+        "robust": RobustScaler(),
+
+        "normalizer": Normalizer(),
+
+        "maxabs": MaxAbsScaler()
+
+    }
+
+    if method not in scalers:
+
+        raise HTTPException(
+
+            status_code=400,
+
+            detail="Unsupported scaling method."
+
+        )
+
+    scaler = scalers[method]
+
+    df[columns] = scaler.fit_transform(
+        df[columns]
+    )
+
+    processed_path = save_processed_dataset(
+        df,
+        f"{method}_scaled"
+    )
+
+    return {
+
+        "message": "Scaling completed successfully.",
+
+        "method": method,
+
+        "scaled_columns": columns,
 
         "processed_file": processed_path,
 
