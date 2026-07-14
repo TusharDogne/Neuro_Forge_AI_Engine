@@ -47,3 +47,8 @@ class Dataset(Base):
         "Project",
         back_populates="datasets"
     )
+    versions = relationship(
+    "DatasetVersion",
+    back_populates="dataset",
+    cascade="all, delete"
+    )

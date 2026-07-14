@@ -114,13 +114,9 @@ def scale(
 ):
 
     return scale_dataset(
-
         dataset_id,
-
         columns,
-
         method,
-
         db
-
     )
+

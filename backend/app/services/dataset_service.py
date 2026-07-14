@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from app.models.dataset import Dataset
 from app.utils.file_utils import save_uploaded_file, read_dataset
 from fastapi import HTTPException
+from app.services.version_service import create_version
+
 
 
 
@@ -33,6 +35,12 @@ def upload_dataset_service(file, project_id: int, db: Session):
     db.add(dataset)
     db.commit()
     db.refresh(dataset)
+    create_version(
+    dataset_id=dataset.id,
+    operation="Original Upload",
+    file_path=file_path,
+    db=db
+)
 
     return {
         "message": "Dataset uploaded successfully",

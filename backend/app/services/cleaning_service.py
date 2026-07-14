@@ -373,3 +373,344 @@ def scale_dataset(
         "columns": int(df.shape[1])
 
     }
+def detect_outliers(
+    dataset_id: int,
+    column: str,
+    method: str,
+    db: Session
+):
+
+    dataset, df = load_dataset(dataset_id, db)
+
+    if column not in df.columns:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{column} not found."
+        )
+
+    if not pd.api.types.is_numeric_dtype(df[column]):
+        raise HTTPException(
+            status_code=400,
+            detail="Column must be numeric."
+        )
+
+    method = method.lower()
+
+    if method == "iqr":
+
+        Q1 = df[column].quantile(0.25)
+        Q3 = df[column].quantile(0.75)
+
+        IQR = Q3 - Q1
+
+        lower = Q1 - 1.5 * IQR
+        upper = Q3 + 1.5 * IQR
+
+        indexes = df[
+            (df[column] < lower) |
+            (df[column] > upper)
+        ].index.tolist()
+
+    elif method == "zscore":
+
+        z = np.abs(zscore(df[column].dropna()))
+
+        indexes = df.loc[
+            df[column].dropna().index[z > 3]
+        ].index.tolist()
+
+    else:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Method must be iqr or zscore."
+        )
+
+    return {
+
+        "column": column,
+
+        "method": method,
+
+        "outliers": len(indexes),
+
+        "indexes": indexes
+
+    }
+def remove_outliers(
+    dataset_id: int,
+    column: str,
+    method: str,
+    db: Session
+):
+
+    dataset, df = load_dataset(dataset_id, db)
+
+    result = detect_outliers(
+        dataset_id,
+        column,
+        method,
+        db
+    )
+
+    indexes = result["indexes"]
+
+    df = df.drop(index=indexes)
+
+    processed_path = save_processed_dataset(
+        df,
+        "outliers_removed"
+    )
+
+    return {
+
+        "removed": len(indexes),
+
+        "remaining_rows": len(df),
+
+        "processed_file": processed_path
+
+    }
+def auto_scale(
+    dataset_id: int,
+    method: str,
+    target_column: str | None,
+    db: Session
+):
+
+    dataset, df = load_dataset(dataset_id, db)
+
+    numeric = df.select_dtypes(
+        include=["number"]
+    ).columns.tolist()
+
+    ignore = [
+
+        "id",
+        "ID",
+        "customerid",
+        "CustomerId",
+        "RowNumber",
+        "Index"
+    ]
+
+    numeric = [
+
+        col
+
+        for col in numeric
+
+        if col not in ignore
+
+    ]
+
+    if target_column in numeric:
+
+        numeric.remove(target_column)
+
+    return scale_dataset(
+
+        dataset_id,
+
+        numeric,
+
+        method,
+
+        db
+
+    )
+def auto_encode(
+    dataset_id: int,
+    db: Session
+):
+
+    dataset, df = load_dataset(
+        dataset_id,
+        db
+    )
+
+    encoded = []
+
+    for column in df.columns:
+
+        if pd.api.types.is_object_dtype(df[column]):
+
+            unique = df[column].nunique()
+
+            if unique <= 2:
+
+                encoder = LabelEncoder()
+
+                df[column] = encoder.fit_transform(
+                    df[column].astype(str)
+                )
+
+                encoded.append(
+                    {
+                        "column": column,
+                        "method": "label"
+                    }
+                )
+
+            else:
+
+                df = pd.get_dummies(
+                    df,
+                    columns=[column],
+                    dtype=int
+                )
+
+                encoded.append(
+                    {
+                        "column": column,
+                        "method": "onehot"
+                    }
+                )
+
+    processed = save_processed_dataset(
+        df,
+        "auto_encoded"
+    )
+
+    return {
+
+        "message": "Auto Encoding completed.",
+
+        "encoded_columns": encoded,
+
+        "processed_file": processed
+
+    }
+def auto_preprocess(
+    dataset_id: int,
+    target_column: str | None,
+    db: Session
+):
+
+    dataset, df = load_dataset(
+        dataset_id,
+        db
+    )
+
+    report = []
+
+    # Missing values
+
+    for column in df.columns:
+
+        if df[column].isnull().sum():
+
+            if pd.api.types.is_numeric_dtype(df[column]):
+
+                df[column] = df[column].fillna(
+                    df[column].median()
+                )
+
+            else:
+
+                df[column] = df[column].fillna(
+                    df[column].mode()[0]
+                )
+
+    report.append(
+        "Missing values handled"
+    )
+
+    # Remove duplicates
+
+    before = len(df)
+
+    df = df.drop_duplicates()
+
+    report.append(
+        f"Removed {before-len(df)} duplicates"
+    )
+
+    # Encode
+
+    encoded = []
+
+    for column in list(df.columns):
+
+        if pd.api.types.is_object_dtype(df[column]):
+
+            if df[column].nunique() <= 2:
+
+                encoder = LabelEncoder()
+
+                df[column] = encoder.fit_transform(
+                    df[column].astype(str)
+                )
+
+                encoded.append(column)
+
+            else:
+
+                df = pd.get_dummies(
+                    df,
+                    columns=[column],
+                    dtype=int
+                )
+
+                encoded.append(column)
+
+    report.append(
+        f"Encoded {len(encoded)} columns"
+    )
+
+    # Scale
+
+    numeric = df.select_dtypes(
+        include=["number"]
+    ).columns.tolist()
+
+    ignore = [
+        "id",
+        "ID",
+        "CustomerId",
+        "customerid",
+        "RowNumber"
+    ]
+
+    numeric = [
+
+        col
+
+        for col in numeric
+
+        if col not in ignore
+
+    ]
+
+    if target_column in numeric:
+
+        numeric.remove(target_column)
+
+    scaler = StandardScaler()
+
+    df[numeric] = scaler.fit_transform(
+        df[numeric]
+    )
+
+    report.append(
+        f"Scaled {len(numeric)} columns"
+    )
+
+    processed = save_processed_dataset(
+        df,
+        "auto_preprocessed"
+    )
+
+    return {
+
+        "message": "Auto preprocessing completed.",
+
+        "steps": report,
+
+        "processed_file": processed,
+
+        "rows": len(df),
+
+        "columns": len(df.columns)
+
+    }
