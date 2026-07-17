@@ -10,6 +10,8 @@ from app.routes.eda import router as eda_router
 from app.routes.cleaning import router as cleaning_router
 from app.models.dataset_version import DatasetVersion
 from app.routes.version import router as version_router
+from app.routes.ml import router as ml_router
+from app.models.trained_model import TrainedModel
 
 Base.metadata.create_all(bind=engine)
 
@@ -25,6 +27,7 @@ app.include_router(dataset_router)
 app.include_router(eda_router)
 app.include_router(cleaning_router)
 app.include_router(version_router)
+app.include_router(ml_router)
 
 @app.get("/")
 def home():

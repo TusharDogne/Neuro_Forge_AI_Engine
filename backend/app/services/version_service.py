@@ -1,4 +1,6 @@
 from sqlalchemy.orm import Session
+import pandas as pd
+from fastapi import HTTPException
 
 from app.models.dataset_version import DatasetVersion
 def get_latest_version(
@@ -128,3 +130,33 @@ def rollback_version(
         "file_path": version.file_path
 
     }
+
+def load_version_dataframe(
+    version_id: int,
+    db: Session
+):
+
+    version = (
+        db.query(DatasetVersion)
+        .filter(
+            DatasetVersion.id == version_id
+        )
+        .first()
+    )
+
+    if not version:
+        raise HTTPException(
+            status_code=404,
+            detail="Dataset version not found."
+        )
+
+    try:
+        df = pd.read_csv(version.file_path)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+    return version, df
